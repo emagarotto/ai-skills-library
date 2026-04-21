@@ -37,7 +37,7 @@ Job title: [insert title]
 Job description: [paste URL or full JD text]
 Candidate background: [paste resume URL, upload resume, or write 2-4 sentences summarizing experience]
 Hiring manager notes (optional): [any context about the team, manager, or culture]
-Company research (optional): [paste output from Company Research Report if already run]
+Company research: [Option A: paste or upload an existing report. Option B: type "run research" and the skill will generate it.]
 ```
 
 ---
@@ -56,9 +56,21 @@ Required inputs:
 
 Optional inputs (use if provided):
 - Notes about the hiring manager's priorities, team, or culture
-- Output from a prior company research session
 
-If no company research has been done yet, research the company using web search before writing the report. The prep report depends on company context to be useful.
+### Company Research: Two Options
+
+Before proceeding, ask the user:
+
+"Do you have an existing company research report, or would you like me to run one now?
+
+→ Option A: Paste or upload your report and I'll use it as the research foundation.
+→ Option B: Type 'run research' and I'll generate a full company research report first."
+
+If Option A: accept pasted text, an uploaded file, or a URL. Fetch the URL if one is provided. Confirm receipt before continuing.
+
+If Option B: research the company using web search before writing the prep report. Use that output as the research foundation. Do not ask the user to re-provide information already captured.
+
+Do not proceed to the analysis steps until company research is in hand.
 
 ---
 

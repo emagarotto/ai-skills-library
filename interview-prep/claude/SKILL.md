@@ -25,7 +25,25 @@ Optional (use if provided, note as not provided if absent):
 - Notes about the hiring manager's priorities, team dynamics, or company culture
 - Any prior conversations or outreach with the company
 
-Company research: use the output of the company-research-report skill if it was run in this session. If not, run that skill first before writing the prep report. The prep report depends on company context to be useful.
+### Company Research: Two Options
+
+Before proceeding, ask the user:
+
+"Do you have an existing company research report, or would you like me to run one now?
+
+→ Option A: Upload or paste your report. I'll read it and use it as the research foundation.
+→ Option B: I'll run the Company Research Report skill now and use that output."
+
+**If Option A:** Accept any of the following formats:
+- An uploaded PDF. Read it using the file reading tools.
+- A pasted block of text or markdown. Use it as provided.
+- A URL pointing to the report. Fetch it with web_fetch.
+
+Once received, confirm: "Got it. I'll use this as the research foundation for your prep report."
+
+**If Option B:** Run the company-research-report skill before continuing. Use the full output of that skill as the research input for this report. Do not ask the user to re-provide information already captured in that output.
+
+In either case, do not proceed to the analysis steps until company research is in hand.
 
 ---
 
