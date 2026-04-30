@@ -143,35 +143,152 @@ Use `reportlab`. Install if needed:
 pip install reportlab --break-system-packages
 ```
 
-### Layout
+---
+
+### Accessibility Requirements (WCAG AA)
+
+These rules apply to every element in the PDF.
+
+**Contrast ratios:**
+- Body text (under 18pt): minimum 4.5:1 contrast ratio against background
+- Large text (18pt bold or 24pt regular and above): minimum 3:1
+- All labels, captions, and subheadings: minimum 4.5:1
+- Warning color #C62828 on white: passes at 5.4:1
+- Accent #2D7DD2 on white for decorative rules only: do not use as text color on white below 18pt
+- Never use color as the only means of conveying information. Every color-coded block must also carry a text label.
+
+**Text minimums:**
+- Body text: minimum 9.5pt. Never go below 9pt even when compressing to fit one page.
+- Captions and subheadings: minimum 8pt.
+
+**Alt text for non-text content:**
+- The Role at a Glance block must be readable as plain text without relying on its visual styling.
+- The Gaps and How to Handle Them block must carry the text label "Gaps and How to Handle Them" as a visible subheader, not just a colored border.
+- Any icon or decorative bullet used must have a text equivalent nearby.
+
+**Reading order:**
+- Content must flow in logical reading order: header, Role at a Glance, Top Focus Areas, What Matters Most, How to Position Yourself, Gaps, Questions to Ask.
+- Use ReportLab flowables (Paragraph, Table, Spacer) for all body content. Use canvas drawString only for the page header and footer.
+
+**Document metadata:**
+Set the following before saving:
+```python
+canvas.setTitle("[Company] – [Job Title] Interview Prep Report")
+canvas.setAuthor("Interview Prep Skill")
+canvas.setSubject("Interview Preparation and Candidate Positioning")
+```
+
+---
+
+### Type System
+
+| Element | Font | Size | Color |
+|---|---|---|---|
+| Header: company and job title | Helvetica-Bold | 13pt | Primary #1B3A6B |
+| Header: report label | Helvetica | 10pt | Accent #2D7DD2 |
+| Date line | Helvetica | 8pt | Muted #555555 |
+| Section headers | Helvetica-Bold | 10pt | Primary #1B3A6B |
+| Section rule | 0.5pt line | — | Accent #2D7DD2 |
+| Body text | Helvetica | 9.5pt | Text #1A1A1A |
+| Body leading | — | 14pt | — |
+| Bullet text | Helvetica | 9.5pt | Text #1A1A1A |
+| Gaps subheader | Helvetica-Bold | 9pt | Warning #C62828 |
+| Captions and footnotes | Helvetica-Oblique | 8pt | Muted #555555 |
+| Footer text | Helvetica | 8pt | Muted #555555 |
+
+Body font is Helvetica throughout, not Times-Roman. Helvetica reads more cleanly on screen and in print at small sizes.
+
+---
+
+### Color Palette
+
+| Role | Hex | Contrast on white | Usage |
+|---|---|---|---|
+| Primary | #1B3A6B | 10.5:1 | Headers, cover title |
+| Accent | #2D7DD2 | 4.6:1 | Rules, borders, section numbers |
+| Light background | #F4F6F9 | — | Role at a Glance block |
+| Text | #1A1A1A | 17.5:1 | All body text |
+| Muted | #555555 | 7.4:1 | Captions, dates, footer |
+| Warning | #C62828 | 5.4:1 | Gaps subheader and left border |
+
+---
+
+### Spacing System
+
+```python
+SPACE_XS = 3    # Between caption and next element
+SPACE_SM = 6    # Between bullet items
+SPACE_MD = 10   # Between paragraphs
+SPACE_LG = 16   # Between sections
+```
+
+---
+
+### Page Layout
 
 Target: one page. Use `letter` pagesize. Margins: 0.6 inches on all sides.
 
-If content runs over one page: reduce body font to 9pt, tighten leading to 12, and reduce spacing between sections to 6pt. Never truncate content. A second page is acceptable if the candidate has extensive background notes or optional hiring manager context was provided.
+If content runs over one page: reduce body font to 9pt, tighten leading to 12pt, and reduce SPACE_LG to 10pt. Never truncate content. A second page is acceptable when the candidate has extensive background or hiring manager notes were provided.
 
-### Typography
-- Report header: 14pt Helvetica-Bold, primary color. Left: company name and job title. Right: "Interview Prep Report"
-- Date: 8pt Helvetica, muted color, below the header rule
-- Section headers: use the exact names from the Report Sections above. 10pt Helvetica-Bold, primary color, with a 0.5pt rule in accent color beneath
-- Body text: 9.5pt Times-Roman, leading 13
-- Bullet items: 9.5pt Times-Roman with a small square bullet in accent color
-- "Gaps and How to Handle Them" subheader: 9pt Helvetica-Bold, warning color
+---
 
-### Color Palette
-- Primary: #1B3A6B
-- Accent: #2D7DD2
-- Background: white
-- Text: #1A1A1A
-- Muted: #555555
-- Warning: #C62828
+### Header Block
+
+Top of every page. Draw using canvas callback.
+
+- Left side: company name and job title, 13pt Helvetica-Bold, primary color
+- Right side: "Interview Prep Report", 10pt Helvetica, accent color
+- Below: full-width 1pt rule in accent color
+- Below rule: date generated, 8pt Helvetica, muted color, left-aligned
+
+---
 
 ### Role at a Glance Block
-Render in a shaded box (#F4F6F9) with a 2pt left border in accent color (#2D7DD2). This should appear immediately below the header rule, before the first section.
+
+Immediately below the header rule. Render as a `Table` with:
+- Background: #F4F6F9
+- Left border: 3pt solid accent color (#2D7DD2)
+- Padding: 10pt all sides
+- Body text: 9.5pt Helvetica, leading 14, text color #1A1A1A
+- Label "Role at a Glance" as 10pt Helvetica-Bold, primary color, immediately above the box
+- SPACE_LG below the block before the first section
+
+---
+
+### Section Headers
+
+Each section header follows this pattern:
+1. Section title: 10pt Helvetica-Bold, primary color (#1B3A6B)
+2. Rule: 0.5pt horizontal line, accent color, full width, SPACE_XS below title
+3. SPACE_SM before body content begins
+
+---
 
 ### Gaps and How to Handle Them Block
-Render with a 2pt left border in warning color (#C62828). Body text remains standard color. This is a subsection within "How You Should Position Yourself", not a standalone section.
+
+A subsection within "How You Should Position Yourself". Render as a `Table` with:
+- Left border: 3pt solid warning color (#C62828)
+- Background: white
+- Padding: 8pt left, 6pt top/bottom, 4pt right
+- Subheader "Gaps and How to Handle Them": 9pt Helvetica-Bold, warning color (#C62828), above the block
+- Body text: 9.5pt Helvetica, text color #1A1A1A
+- SPACE_SM between each gap item
+
+---
+
+### Page Footer
+
+On every page. Draw using canvas callback.
+
+- Left: candidate name if provided, otherwise company name and job title, 8pt Helvetica, muted color
+- Center: "Interview Prep Report", 8pt Helvetica, muted color
+- Right: "Page N of M", 8pt Helvetica, muted color
+- Top border: 0.5pt rule in #E0E0E0 across full width
+
+---
 
 ### File Naming
+
 Save to:
 `/mnt/user-data/outputs/[company-slug]-[job-slug]-interview-prep.pdf`
 

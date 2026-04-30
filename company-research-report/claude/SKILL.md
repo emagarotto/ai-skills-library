@@ -1,5 +1,5 @@
 ---
-name: company-research-report
+name: Company Research Report
 description: Generate a structured, professional research report on any company and deliver it as a PDF. Use this skill whenever the user provides a company name and wants to learn about it, research it before a meeting or interview, evaluate it as a potential employer, partner, or investment target, or get a comprehensive breakdown of an organization. Trigger on phrases like "research this company", "tell me about [company]", "I have a meeting with [company]", "generate a company report", "give me a breakdown of [company]", "I'm interviewing at [company]", "do a deep dive on [company]", or any time the user wants a thorough overview of an organization. Always produce a PDF as the final output.
 ---
 
@@ -127,80 +127,268 @@ Use `reportlab` and `matplotlib`. Install if needed:
 pip install reportlab matplotlib --break-system-packages
 ```
 
-### Page Setup
-Use `SimpleDocTemplate` with `letter` pagesize. Margins: 0.75 inches on all sides. Register a `onFirstPage` / `onLaterPages` canvas callback for the footer.
+---
 
-### Typography
-- Report title: 24pt Helvetica-Bold
-- Section headers: 14pt Helvetica-Bold, primary color (#1B3A6B)
-- Body text: 10pt Times-Roman, leading 14
-- Captions: 9pt Helvetica italic
-- Muted labels: 9pt Helvetica, color #555555
+### Accessibility Requirements (WCAG AA)
+
+These rules are non-negotiable and apply to every element in the PDF.
+
+**Contrast ratios:**
+- Body text (under 18pt): minimum 4.5:1 contrast ratio against background
+- Large text (18pt bold or 24pt regular and above): minimum 3:1 contrast ratio
+- All chart labels, axis text, and captions: minimum 4.5:1
+- SWOT header text (white on color): verify each header color meets 4.5:1 against white text
+  - Green #2E7D32 on white text: passes at 5.1:1
+  - Red #C62828 on white text: passes at 5.4:1
+  - Blue #1565C0 on white text: passes at 6.9:1
+  - Orange #E65100 on white text: passes at 3.8:1 — use #BF360C instead for AA compliance
+- Never use color as the only means of conveying information. Every color-coded element must also use a text label, pattern, or shape.
+
+**Text minimums:**
+- Body text: minimum 10pt. Never go below 9pt even when compressing to fit one page.
+- Captions and footnotes: minimum 8pt.
+
+**Alt text for all non-text content:**
+- Every chart embedded in the PDF must include a one-sentence plain-text description immediately below it as a caption. Example: "Bar chart showing Intelligems funding history across four rounds totaling $22M from 2021 to 2025."
+- The SWOT table must include a text summary paragraph above it: "The following table summarizes the company's internal strengths and weaknesses alongside external opportunities and threats."
+- Every visual callout block (executive summary box, sidebar) must be readable as plain text without relying on its visual styling.
+
+**Reading order:**
+- Content must flow in logical reading order: cover, executive summary, sections 1-12, SWOT, sources.
+- Do not use absolute positioning or canvas drawString for body content. Use ReportLab flowables (Paragraph, Table, Spacer) so reading order is preserved in the document structure.
+- Use canvas drawString only for page headers and footers.
+
+**Document metadata:**
+Set the following on the PDF canvas before saving:
+```python
+canvas.setTitle("[Company] Research Report")
+canvas.setAuthor("Company Research Report Skill")
+canvas.setSubject("Company Research and Competitive Analysis")
+```
+
+---
+
+### Type System
+
+Use a modern, professional sans-serif and serif pairing.
+
+**Primary font (headings):** Helvetica-Bold
+**Body font:** Helvetica (not Times-Roman — cleaner on screen and print)
+**Accent font:** Helvetica-Oblique for captions and pull quotes
+
+| Element | Font | Size | Weight | Color |
+|---|---|---|---|---|
+| Cover title | Helvetica-Bold | 28pt | Bold | Primary #1B3A6B |
+| Cover subtitle | Helvetica | 14pt | Regular | Accent #2D7DD2 |
+| Cover date/tagline | Helvetica | 10pt | Regular | Muted #555555 |
+| Section number | Helvetica-Bold | 9pt | Bold | Accent #2D7DD2 |
+| Section header | Helvetica-Bold | 13pt | Bold | Primary #1B3A6B |
+| Body text | Helvetica | 10pt | Regular | Text #1A1A1A |
+| Body leading | — | 15pt | — | — |
+| Bullet text | Helvetica | 10pt | Regular | Text #1A1A1A |
+| Caption / alt text | Helvetica-Oblique | 8.5pt | Oblique | Muted #555555 |
+| Footer text | Helvetica | 8pt | Regular | Muted #555555 |
+| Executive summary | Helvetica | 10pt | Regular | Text #1A1A1A |
+| Pull quote | Helvetica-Bold | 11pt | Bold | Primary #1B3A6B |
+
+---
 
 ### Color Palette
-- Primary: #1B3A6B (dark navy)
-- Accent: #2D7DD2 (blue)
-- Light background: #F4F6F9
-- Text: #1A1A1A
-- Muted: #555555
-- SWOT green: #2E7D32
-- SWOT red: #C62828
-- SWOT blue: #1565C0
-- SWOT orange: #E65100
+
+All colors verified at WCAG AA contrast on white backgrounds unless noted.
+
+| Role | Hex | Usage |
+|---|---|---|
+| Primary | #1B3A6B | Section headers, cover title, pull quotes |
+| Accent | #2D7DD2 | Rules, borders, section numbers, links |
+| Light background | #F4F6F9 | Executive summary block, callout boxes |
+| Text | #1A1A1A | All body text |
+| Muted | #555555 | Captions, footers, dates |
+| SWOT Strengths | #2E7D32 | Header row only, white text on top |
+| SWOT Weaknesses | #C62828 | Header row only, white text on top |
+| SWOT Opportunities | #1565C0 | Header row only, white text on top |
+| SWOT Threats | #BF360C | Header row only, white text on top (AA compliant replacement for #E65100) |
+| Chart primary | #2D7DD2 | Bar fills, line strokes |
+| Chart secondary | #1B3A6B | Comparison bars or secondary data series |
+| Chart background | #FFFFFF | Plot area background |
+| Chart gridlines | #E0E0E0 | Horizontal gridlines only |
+
+---
+
+### Spacing System
+
+Use consistent vertical rhythm throughout. Define these as constants in the Python script:
+
+```python
+SPACE_XS  = 4   # Between caption and next element
+SPACE_SM  = 8   # Between bullet items
+SPACE_MD  = 14  # Between paragraphs
+SPACE_LG  = 20  # Between sections
+SPACE_XL  = 32  # After cover elements, before first section
+```
+
+---
 
 ### Cover Page
-Page 1 only. Include:
-- Company name as the title in primary color
-- "Research Report" as subtitle in accent color
-- Date generated (formatted as Month DD, YYYY)
-- A horizontal rule in accent color below the subtitle
-- A one-line company tagline or descriptor if found during research
+
+Page 1 only. No page number on the cover.
+
+Layout from top to bottom:
+1. Top rule: 4pt horizontal line in accent color, full width, at top margin
+2. Vertical spacer: SPACE_XL
+3. Company name: 28pt Helvetica-Bold, primary color, left-aligned
+4. "Research Report" label: 14pt Helvetica, accent color, left-aligned, SPACE_SM below company name
+5. Horizontal rule: 1pt in accent color, full width, SPACE_SM below subtitle
+6. Company tagline or one-line descriptor: 10pt Helvetica, muted color, SPACE_SM below rule
+7. Date generated: 10pt Helvetica, muted color, formatted as "April 21, 2026"
+8. Bottom rule: 4pt horizontal line in primary color, full width, at bottom margin
+
+---
 
 ### Executive Summary Block
-On page 2, before Section 1. Render inside a `Table` with a light background (#F4F6F9) and a 2pt left border in accent color. Label it "Executive Summary" in bold above the box.
+
+Immediately after the cover, before Section 1.
+
+Render as a `Table` with:
+- Background: #F4F6F9
+- Left border: 3pt solid accent color (#2D7DD2)
+- Padding: 12pt all sides
+- Label "Executive Summary" above the box in 11pt Helvetica-Bold, primary color
+- Body text: 10pt Helvetica, leading 15, text color #1A1A1A
+- SPACE_LG below the block before Section 1 begins
+
+---
+
+### Section Headers
+
+Each section header follows this pattern:
+1. Section number badge: 9pt Helvetica-Bold, accent color (#2D7DD2), inline before the title
+2. Section title: 13pt Helvetica-Bold, primary color (#1B3A6B)
+3. Rule: 0.75pt horizontal line, accent color, full width, SPACE_XS below title
+4. SPACE_MD before body text begins
+
+Example: "1. Company Overview" where "1." renders in accent and "Company Overview" renders in primary.
+
+---
+
+### Callout Blocks
+
+Use for key data points, notable quotes from executives, or single high-impact facts found during research.
+
+Render as a `Table` with:
+- Left border: 3pt solid primary color (#1B3A6B)
+- Background: white
+- Padding: 10pt left, 8pt top/bottom, 6pt right
+- Text: 11pt Helvetica-Bold, primary color
+- Use sparingly: maximum 2 callout blocks per report
+
+---
 
 ### Charts
-Generate with `matplotlib`. Save each chart as a PNG to `/tmp/` then embed using ReportLab's `Image` flowable. Set `width` to fit within the page margins (approximately 6.5 inches). Set `height` proportionally.
 
-Charts to produce where data is available:
+Generate with `matplotlib`. Apply these style rules to every chart before saving.
 
-1. Funding History Bar Chart
-   - X-axis: round name (Seed, Series A, Series B, etc.)
-   - Y-axis: amount raised in $M
-   - Bar color: accent color
-   - Title: "[Company] Funding History"
+**Global chart style:**
+```python
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
-2. Revenue Growth Chart (if multi-year data is available)
-   - X-axis: year
-   - Y-axis: revenue in $M or ARR in $M
-   - Line chart with markers
-   - Title: "[Company] Revenue Growth"
+mpl.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans'],
+    'font.size': 10,
+    'axes.titlesize': 12,
+    'axes.titleweight': 'bold',
+    'axes.titlecolor': '#1B3A6B',
+    'axes.labelsize': 10,
+    'axes.labelcolor': '#1A1A1A',
+    'axes.edgecolor': '#E0E0E0',
+    'axes.linewidth': 0.8,
+    'axes.facecolor': '#FFFFFF',
+    'figure.facecolor': '#FFFFFF',
+    'xtick.color': '#555555',
+    'ytick.color': '#555555',
+    'xtick.labelsize': 9,
+    'ytick.labelsize': 9,
+    'grid.color': '#E0E0E0',
+    'grid.linewidth': 0.6,
+    'grid.axis': 'y',
+})
+```
 
-3. Competitive Positioning Matrix (if sufficient data)
-   - 2x2 scatter plot
-   - X-axis: relative market share (low to high)
-   - Y-axis: growth rate (low to high)
-   - Plot the company and its top 3-5 competitors as labeled bubbles
-   - Title: "Competitive Positioning"
+**Chart dimensions:** width 6.5 inches, height 3.2 inches. Save to `/tmp/` as PNG at 150 DPI.
 
-If data for a chart is insufficient, skip that chart and note it briefly in the relevant section.
+**Alt text caption:** immediately below every embedded chart, render a one-sentence plain-text description in 8.5pt Helvetica-Oblique, muted color (#555555).
+
+**Chart 1: Funding History Bar Chart**
+- X-axis: round name (Seed, Series A, etc.) in 9pt, muted color
+- Y-axis: amount raised in $M, label "Amount Raised ($M)"
+- Bars: fill color #2D7DD2, edge color #1B3A6B, linewidth 0.5, bar width 0.55
+- Data labels: amount in $M centered above each bar, 9pt bold, primary color
+- Title: "[Company] Funding History", 12pt bold, primary color
+- No top or right spine
+- Alt text caption: "Bar chart showing [company] funding history by round."
+
+**Chart 2: Revenue Growth Chart** (if multi-year data is available)
+- X-axis: year
+- Y-axis: revenue or ARR in $M
+- Line: color #2D7DD2, linewidth 2, markers circle, markersize 6, markerfacecolor white, markeredgecolor #2D7DD2
+- Fill under line: #2D7DD2 at 10% opacity
+- Title: "[Company] Revenue Growth", 12pt bold, primary color
+- No top or right spine
+- Alt text caption: "Line chart showing [company] revenue growth from [year] to [year]."
+
+**Chart 3: Competitive Positioning Matrix** (if sufficient data)
+- Scatter plot with labeled bubbles for the company and top 3-5 competitors
+- X-axis: relative market share (low to high), label "Relative Market Share"
+- Y-axis: relative growth rate (low to high), label "Relative Growth Rate"
+- Subject company bubble: color #1B3A6B, size 180, zorder 5
+- Competitor bubbles: color #2D7DD2 at 60% opacity, size 120
+- Labels: 9pt, offset slightly above each bubble, primary color for subject company, muted for competitors
+- Light quadrant lines at 0.5/0.5 intersection: #E0E0E0, linewidth 0.8, dashed
+- Note below chart: "Note: positions estimated from available public data."
+- Alt text caption: "Scatter chart showing competitive positioning of [company] versus key competitors by market share and growth rate."
+
+---
 
 ### SWOT Table
-Render as a 2x2 `Table` using `TableStyle`. Each quadrant has a colored header row and white cell body.
 
-| Strengths (green #2E7D32) | Weaknesses (red #C62828) |
-| Opportunities (blue #1565C0) | Threats (orange #E65100) |
+Render as a 2x2 `Table` using `TableStyle`.
 
-Header text: 10pt Helvetica-Bold, white. Body text: 9pt Times-Roman. Cell padding: 8pt.
+Before the table, add this paragraph in 10pt Helvetica, body color:
+"The following table summarizes the company's internal strengths and weaknesses alongside external opportunities and threats."
+
+Table layout:
+- Top-left: Strengths, header #2E7D32
+- Top-right: Weaknesses, header #C62828
+- Bottom-left: Opportunities, header #1565C0
+- Bottom-right: Threats, header #BF360C
+
+Each quadrant:
+- Header row: 10pt Helvetica-Bold, white text, 8pt padding
+- Body: 9pt Helvetica, text color #1A1A1A, white background, 8pt padding
+- Items as short bullet statements using → prefix
+- Grid lines: 0.5pt, color #E0E0E0
+
+---
 
 ### Page Footer
-On every page after the cover. Left: company name in muted color. Right: "Page N" in muted color. Draw using the canvas callback, not as a flowable.
+
+On every page after the cover. Draw using canvas callback, not as a flowable.
+
+- Left: company name, 8pt Helvetica, muted color (#555555)
+- Center: skill name "Company Research Report", 8pt Helvetica, muted color
+- Right: "Page N of M", 8pt Helvetica, muted color
+- Top border of footer: 0.5pt rule in #E0E0E0 across full width
+
+---
 
 ### File Naming
-Save the final PDF to:
+
+Save to:
 `/mnt/user-data/outputs/[company-slug]-research-report.pdf`
 
-Where `[company-slug]` is the company name in lowercase with hyphens (e.g., `stripe-research-report.pdf`, `openai-research-report.pdf`).
+Where `[company-slug]` is the company name in lowercase with hyphens (e.g., `stripe-research-report.pdf`).
 
 After saving, use `present_files` to deliver the PDF to the user.
 
