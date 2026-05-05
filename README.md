@@ -22,9 +22,9 @@ Trigger phrases:
 | Platform | File | Output |
 |----------|------|--------|
 | Claude | `company-research-report/claude/SKILL.md` | PDF with charts and SWOT table |
-| ChatGPT | `company-research-report/chatgpt/instructions.md` | Markdown report in chat |
-| Copilot | `company-research-report/copilot/instructions.md` | Markdown report in Copilot Chat |
-| Gemini | `company-research-report/gemini/instructions.md` | Markdown report in chat or terminal |
+| ChatGPT | `company-research-report/chatgpt/company-research-report.md` | Markdown report in chat |
+| Copilot | `company-research-report/copilot/company-research-report.md` | Markdown report in Copilot Chat |
+| Gemini | `company-research-report/gemini/company-research-report.md` | Markdown report in chat or terminal |
 
 ---
 
@@ -44,9 +44,48 @@ Trigger phrases:
 | Platform | File | Output |
 |----------|------|--------|
 | Claude | `interview-prep/claude/SKILL.md` | One-page PDF |
-| ChatGPT | `interview-prep/chatgpt/instructions.md` | Markdown report in chat |
-| Copilot | `interview-prep/copilot/instructions.md` | Markdown report in Copilot Chat |
-| Gemini | `interview-prep/gemini/instructions.md` | Markdown report in chat or terminal |
+| ChatGPT | `interview-prep/chatgpt/interview-prep.md` | Markdown report in chat |
+| Copilot | `interview-prep/copilot/interview-prep.md` | Markdown report in Copilot Chat |
+| Gemini | `interview-prep/gemini/interview-prep.md` | Markdown report in chat or terminal |
+
+---
+
+### job-application-kit
+
+Generates a full tailored application kit from a job posting URL. Fetches the job description, your resume, and your LinkedIn profile. Researches the hiring manager. Identifies the top 5 keywords from the JD. Produces a cover letter body, resume summary, and LinkedIn connection note — all constrained to exact character and word limits.
+
+On Claude: also creates a Job Details PDF and clones your Google Doc cover letter and resume templates in Drive with the company and role in the filename, ready for you to paste the generated content and export to PDF.
+
+Trigger phrases:
+- "Process this job: [URL]"
+- "Build my application kit for this role"
+- "Generate my cover letter for [URL]"
+- "Who should I contact at [company]?"
+- "Write my cover letter and LinkedIn note for this job"
+
+| Platform | File | Output |
+|----------|------|--------|
+| Claude | `job-application-kit/claude/SKILL.md` | In-chat kit + Job Details PDF + cloned Drive templates |
+| ChatGPT | `job-application-kit/chatgpt/job-application-kit.md` | In-chat kit (plain text, copy-paste into templates) |
+| Copilot | `job-application-kit/copilot/job-application-kit.md` | In-chat kit (plain text) |
+| Gemini | `job-application-kit/gemini/job-application-kit.md` | In-chat kit (plain text) |
+
+> This version contains Ezio Magarotto's personal info (resume URL, LinkedIn, background). To use it yourself, see `job-application-kit-public/` below.
+
+---
+
+### job-application-kit-public
+
+The same job application kit skill with all personal info replaced by placeholders. Drop in your own name, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
+
+See `job-application-kit-public/SETUP.md` for the full setup guide.
+
+| Platform | File | Output |
+|----------|------|--------|
+| Claude | `job-application-kit-public/claude/SKILL.md` | In-chat kit + Job Details PDF + cloned Drive templates |
+| ChatGPT | `job-application-kit-public/chatgpt/job-application-kit-public.md` | In-chat kit (plain text) |
+| Copilot | `job-application-kit-public/copilot/job-application-kit-public.md` | In-chat kit (plain text) |
+| Gemini | `job-application-kit-public/gemini/job-application-kit-public.md` | In-chat kit (plain text) |
 
 ---
 
@@ -59,49 +98,66 @@ Trigger phrases:
 4. Trigger it using any phrase listed above
 
 ### ChatGPT
-1. Open the `instructions.md` file from the skill's `chatgpt/` folder
+1. Open the skill's file from the `chatgpt/` folder
 2. Copy the contents of the Skill Instructions section
 3. Paste into a Custom GPT (Configure tab) or a Project's Custom Instructions field
 4. Enable Web Search under Capabilities
 
 ### GitHub Copilot
-1. Open the skill's `copilot/` folder
-2. For repo-level use: copy `copilot-instructions.md` to `.github/copilot-instructions.md` in your repo
-3. For one-off use: copy the prompt template from `instructions.md` into Copilot Chat
+1. Open the skill's file from the `copilot/` folder
+2. For repo-level use: copy the contents to `.github/copilot-instructions.md` in your repo
+3. For one-off use: paste the prompt directly into Copilot Chat
 
 ### Gemini
-1. Open the `instructions.md` file from the skill's `gemini/` folder
+1. Open the skill's file from the `gemini/` folder
 2. For a Gem: go to gemini.google.com, open Gems, click New Gem, paste the Gem Instructions section
 3. For AI Studio: paste into the System Instructions field at aistudio.google.com
-4. For CLI: `gemini --system-prompt "$(cat gemini/instructions.md)" "your prompt"`
+4. For CLI: `gemini --system-prompt "$(cat gemini/[skill-name].md)" "your prompt"`
 
 ---
 
 ## Repo Structure
 
 ```
-ai-skills-library/
+ai-skills-repo/
 ├── README.md
 ├── company-research-report/
 │   ├── claude/
 │   │   └── SKILL.md
 │   ├── chatgpt/
-│   │   └── instructions.md
+│   │   └── company-research-report.md
 │   ├── copilot/
-│   │   ├── instructions.md
-│   │   └── copilot-instructions.md
+│   │   └── company-research-report.md
 │   └── gemini/
-│       └── instructions.md
-└── interview-prep/
+│       └── company-research-report.md
+├── interview-prep/
+│   ├── claude/
+│   │   └── SKILL.md
+│   ├── chatgpt/
+│   │   └── interview-prep.md
+│   ├── copilot/
+│   │   └── interview-prep.md
+│   └── gemini/
+│       └── interview-prep.md
+├── job-application-kit/
+│   ├── claude/
+│   │   └── SKILL.md
+│   ├── chatgpt/
+│   │   └── job-application-kit.md
+│   ├── copilot/
+│   │   └── job-application-kit.md
+│   └── gemini/
+│       └── job-application-kit.md
+└── job-application-kit-public/
+    ├── SETUP.md
     ├── claude/
     │   └── SKILL.md
     ├── chatgpt/
-    │   └── instructions.md
+    │   └── job-application-kit-public.md
     ├── copilot/
-    │   ├── instructions.md
-    │   └── copilot-instructions.md
+    │   └── job-application-kit-public.md
     └── gemini/
-        └── instructions.md
+        └── job-application-kit-public.md
 ```
 
 ---
@@ -111,7 +167,7 @@ ai-skills-library/
 Create a new folder at the root level using the skill name. Inside it, create one subfolder per platform: `claude/`, `chatgpt/`, `copilot/`, `gemini/`. Add the appropriate file to each.
 
 For Claude: `SKILL.md` with YAML frontmatter (name, description) and structured markdown instructions.
-For all other platforms: `instructions.md` with a How to Use section and the full instructions ready to paste.
+For all other platforms: name the file after the skill (e.g., `company-research-report.md`) with a How to Use section and the full instructions ready to paste.
 
 ---
 
