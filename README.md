@@ -56,7 +56,7 @@ Generates a full tailored application kit from a job posting URL. Fetches the jo
 
 On Claude: also creates a Job Details PDF and clones your Google Doc cover letter and resume templates in Drive with the company and role in the filename, ready for you to paste the generated content and export to PDF.
 
-All personal info is replaced by placeholders. Drop in your own name, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
+Drop in your name, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
 
 Trigger phrases:
 - "Process this job: [URL]"
