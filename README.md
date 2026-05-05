@@ -126,15 +126,6 @@ ai-skills-repo/
 │   │   └── interview-prep.md
 │   └── gemini/
 │       └── interview-prep.md
-├── job-application-kit/
-│   ├── claude/
-│   │   └── SKILL.md
-│   ├── chatgpt/
-│   │   └── job-application-kit.md
-│   ├── copilot/
-│   │   └── job-application-kit.md
-│   └── gemini/
-│       └── job-application-kit.md
 └── job-application-kit-public/
     ├── SETUP.md
     ├── claude/
