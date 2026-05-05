@@ -50,30 +50,6 @@ Trigger phrases:
 
 ---
 
-### job-application-kit
-
-Generates a full tailored application kit from a job posting URL. Fetches the job description, your resume, and your LinkedIn profile. Researches the hiring manager. Identifies the top 5 keywords from the JD. Produces a cover letter body, resume summary, and LinkedIn connection note — all constrained to exact character and word limits.
-
-On Claude: also creates a Job Details PDF and clones your Google Doc cover letter and resume templates in Drive with the company and role in the filename, ready for you to paste the generated content and export to PDF.
-
-Trigger phrases:
-- "Process this job: [URL]"
-- "Build my application kit for this role"
-- "Generate my cover letter for [URL]"
-- "Who should I contact at [company]?"
-- "Write my cover letter and LinkedIn note for this job"
-
-| Platform | File | Output |
-|----------|------|--------|
-| Claude | `job-application-kit/claude/SKILL.md` | In-chat kit + Job Details PDF + cloned Drive templates |
-| ChatGPT | `job-application-kit/chatgpt/job-application-kit.md` | In-chat kit (plain text, copy-paste into templates) |
-| Copilot | `job-application-kit/copilot/job-application-kit.md` | In-chat kit (plain text) |
-| Gemini | `job-application-kit/gemini/job-application-kit.md` | In-chat kit (plain text) |
-
-> This version contains Ezio Magarotto's personal info (resume URL, LinkedIn, background). To use it yourself, see `job-application-kit-public/` below.
-
----
-
 ### job-application-kit-public
 
 The same job application kit skill with all personal info replaced by placeholders. Drop in your own name, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
