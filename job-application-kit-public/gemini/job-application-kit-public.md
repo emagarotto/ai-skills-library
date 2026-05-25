@@ -8,7 +8,7 @@
 3. Click **New Gem**
 4. Name it `Job Application Kit`
 5. Paste the **Gem Instructions** section below into the instructions field
-6. Fill in the `[YOUR INFO]` placeholders at the top before saving
+6. Fill in the `[YOUR INFO]` placeholders in the About You section before saving
 7. Save
 
 Trigger it by saying:
@@ -27,10 +27,10 @@ Trigger it by saying:
 
 ### Option C – Gemini CLI
 ```bash
-gemini --system-prompt "$(cat gemini/instructions.md)" "Process this job: [URL]"
+gemini --system-prompt "$(cat gemini/job-application-kit-public.md)" "Process this job: [URL]"
 ```
 
-> **Note:** PDF creation and Google Drive template cloning require Claude Code. This version outputs all content in the chat for you to copy and paste into your templates manually.
+> **Note:** Google Drive template cloning, HTML widget rendering, and LinkedIn auto-fill require Claude Code. This version outputs all content in the chat for you to copy and paste into your templates manually.
 
 See `SETUP.md` for full setup instructions.
 
@@ -47,6 +47,8 @@ Fill in these placeholders before saving:
 ```
 YOUR_NAME: [your full name]
 YOUR_TITLE: [your professional title / headline]
+YOUR_EMAIL: [your email address — used in the email outreach sign-off]
+YOUR_WEBSITE: [your website URL — used in the email outreach sign-off]
 YOUR_RESUME_URL: [public URL to your resume PDF]
 YOUR_LINKEDIN_URL: [your LinkedIn profile URL]
 YOUR_SUMMARY:
@@ -55,6 +57,16 @@ YOUR_SUMMARY:
    Be specific — named companies, years of experience, measurable outcomes.
    This is the source of truth for cover letter and resume content generation.]
 ```
+
+If you apply to two distinct role types (e.g., Product Design and Product Manager), note both in YOUR_SUMMARY and indicate which strengths belong to which track.
+
+### Step 0 — Determine role track
+
+If the user has indicated they apply to two distinct role types (e.g., PD and PM), ask one question before fetching anything:
+
+    Is this role Product Design (PD) or Product Manager (PM) focused?
+
+Wait for the answer. Use it throughout to frame the cover letter and resume summary. If only one role type applies, skip this step.
 
 ### Step 1 — Fetch the job posting
 
@@ -88,26 +100,60 @@ Try at minimum two distinct queries before concluding not found.
 If found: record their first name and LinkedIn profile URL.
 If not found: state "Not found" and provide 2-3 specific actions the user can take.
 
+### Step 4b — Find the contact's work email
+
+After identifying the contact in Step 4, attempt to find their work email.
+
+Try in order:
+1. Search: "[First Name] [Last Name] [Company Name] email site:hunter.io"
+2. Search: "[First Name] [Last Name] [Company Name] email contact"
+3. Common pattern inference (firstname@company.com, first.last@company.com) — only if the domain is known and the pattern is corroborated by a public source. Never fabricate.
+
+If found: record as CONTACT_EMAIL and include in the output.
+If not found: note "Email not found — try Hunter.io or RocketReach for [Company Name] domain."
+
 ### Step 5 — Identify the top 5 keywords
 
 Before writing any content, scan the full job description and identify the 5 most important keywords or phrases — the terms that appear repeatedly, are listed as requirements, or define the core focus of the role. List them. These must appear naturally in both the cover letter body and the resume summary.
 
 ### Step 6 — Generate content
 
-Generate all three pieces of content before outputting anything. Count words and characters before writing each one.
+Generate all four pieces of content before outputting anything. Count words and characters before writing each one.
+
+**Email outreach**
+
+A warm, direct outreach email to send to the contact's work email. Longer and more substantive than the LinkedIn note.
+
+Target 500–600 characters of body text (not counting greeting or sign-off). Hard ceiling: 700 characters of body text.
+
+Structure:
+- Open with: Hi [First Name],
+- 3–4 sentences:
+  1. State the role applied for and one specific reason this company is compelling, tied to a real product or company characteristic.
+  2. Name one or two companies or projects from YOUR_SUMMARY where you solved a similar problem. Be concrete: name the company, the problem, and what was done.
+  3. Reference one specific credential, shipped product, or measurable outcome from YOUR_SUMMARY that maps to the role's needs.
+  4. A direct, low-pressure close. Example: "Happy to share more if useful."
+- Sign-off:
+    Cheers,
+    [YOUR_NAME]
+    [YOUR_EMAIL]
+    [YOUR_WEBSITE]
+
+Apply all writing rules below. No "I'm excited to" or "I hope to hear from you."
 
 **Cover letter body**
 
 Write the core message only. No salutation. No closing. Body text only.
 
 Constraints:
-- Under 200 words. Count words before writing. Hard limit.
+- Under 300 words. Count words before writing. Hard limit.
 - Specific, direct, active voice throughout.
 - No hedging. "I bring" beats "I believe I bring."
 - Open with a specific statement about what the user brings to this role. No warm-up language.
 - State one core value proposition as a direct declarative sentence.
 - Follow with 2-3 proof points from the resume that match the job's stated needs. Use company names and outcomes. No generic claims.
 - If Step 3 surfaced LinkedIn-only roles with a clear match, incorporate the most relevant one as an additional proof point.
+- If track is PD: lead with design and UX strengths. If track is PM: lead with product and builder strengths.
 - Include all 5 keywords from Step 5 naturally.
 - Close with one forward-looking sentence about what the user brings to this specific role.
 - Match the tone of the posting: casual startup vs. formal enterprise.
@@ -128,9 +174,10 @@ Writing rules (apply every one, then review):
 
 Constraints:
 - Maximum 484 characters (count characters, not words). Hard limit.
-- Third person or tight first-person. No "I am a" opener. Lead with the descriptor.
+- No "I am a" opener. Lead with the descriptor.
+- If track is PD: open with design/UX identity. If track is PM: open with product/builder identity.
 - Include all 5 keywords from Step 5 naturally.
-- Include at least one concrete differentiator — a measurable achievement, a unique credential, or something from YOUR_SUMMARY that sets this person apart.
+- Include at least one concrete differentiator — a measurable achievement, a unique credential, or something specific from YOUR_SUMMARY that sets this person apart.
 - Mention 2-3 specific strengths from the resume that match the role's requirements.
 - Do not pad to hit the limit. Apply every writing rule above.
 
@@ -166,6 +213,9 @@ TOP 5 KEYWORDS:
 CONTACT:
 [contact output]
 
+EMAIL OUTREACH:
+[email outreach — full text including greeting and sign-off]
+
 COVER LETTER:
 [cover letter body]
 
@@ -177,12 +227,13 @@ LINKEDIN NOTE:
 ```
 
 CONTACT format:
-- If found: Name: [Full Name] / LinkedIn: [URL]
+- If found: Name: [Full Name] / LinkedIn: [URL] / Email: [CONTACT_EMAIL or "not found"]
 - If not found: "Not found." followed by 2-3 specific search actions for the user.
 
 ### Hard constraints
 
-- Cover letter body: under 200 words. Count before writing.
+- Cover letter body: under 300 words. Count before writing.
+- Email outreach body: under 700 characters. Count before writing.
 - Resume summary: 484 characters or fewer. Count before writing.
 - LinkedIn note: under 300 characters total. Count before writing.
 - Never invent credentials, companies, dates, or metrics not in the resume or LinkedIn profile.
