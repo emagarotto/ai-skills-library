@@ -1,8 +1,8 @@
 ---
 name: job-application-kit
 description: >
-  Generate a tailored application kit from a job description URL and resume, then produce
-  three PDFs: a Job Details summary, a filled cover letter, and a filled resume.
+  Generate a tailored application kit from a job description URL and resume, then render
+  it as an interactive HTML widget with copy buttons and Drive links.
   Use this skill whenever the user provides a job posting URL (or pasted JD) and asks
   for application materials, a kit, a cover letter, a resume summary, a LinkedIn note,
   or contact research for a role. Also trigger when the user says things like "process
@@ -14,25 +14,46 @@ description: >
 
 # Job Application Kit
 
-This skill produces a full application kit in two phases:
+This skill produces a full application kit rendered as an interactive HTML widget. The
+widget displays all sections with copy buttons and Drive links.
 
-**Phase 1 — In-chat output** (plain text, appears in the conversation):
+The kit has six parts:
+
 1. Header: [Company Name] — [Job Title]
-2. CONTACT
-3. COVER LETTER
-4. RESUME SUMMARY
-5. LINKEDIN NOTE
-
-**Phase 2 — PDF files** (created after the in-chat kit):
-1. Job Details PDF — company, title, salary, full JD (for your records)
-2. Cover Letter PDF — cover letter template cloned from Google Drive, ready to fill
-3. Resume PDF — resume template cloned from Google Drive, ready to fill
+2. CONTACT (includes contact name, LinkedIn link, and pre-written connection note with copy button)
+3. EMAIL OUTREACH (contact's work email as a Gmail compose link + longer outreach email with copy button)
+4. COVER LETTER
+5. RESUME SUMMARY
+6. DOCUMENT TEMPLATES
 
 ---
 
 ## Setup required before first use
 
-See `SETUP.md` in this folder. You must complete setup before running this skill.
+Before running this skill for the first time, answer the following questions so the skill
+can be personalized to you. Paste your answers into the About You and Google Drive
+templates sections below, replacing the placeholder values.
+
+Questions to answer:
+
+1. What is your full name?
+2. What is your professional title or headline (e.g., "Senior Product Designer")?
+3. What is the public URL to your resume PDF? (Must be publicly accessible — if you don't
+   have one, paste your resume text directly into YOUR_SUMMARY below instead.)
+4. What is your LinkedIn profile URL?
+5. What is your email address? (Used for the Gmail compose link in email outreach.)
+6. What is your website URL? (Used in the email sign-off.)
+7. In 3-5 bullet points, describe your professional background. Be specific: include
+   named companies, years of experience, measurable outcomes, certifications, and
+   anything that makes you stand out. This is the source of truth for all generated content.
+8. Do you use a PD (Product Design) and PM (Product Manager) track distinction for
+   applications, or do you apply to one type of role only? If two tracks: provide
+   separate resume and cover letter Google Doc template file IDs for each. If one track:
+   provide one set of template IDs.
+9. What is the Google Drive folder ID where cloned docs should be saved?
+10. What are the Google Doc template file IDs for your cover letter and resume templates?
+    (Each template must contain the placeholder strings `[[cover letter copy]]` and
+    `[[resume summary copy]]` respectively. See SETUP.md for instructions.)
 
 ---
 
@@ -41,6 +62,8 @@ See `SETUP.md` in this folder. You must complete setup before running this skill
 ```
 YOUR_NAME: [your full name]
 YOUR_TITLE: [your professional title / headline]
+YOUR_EMAIL: [your email address]
+YOUR_WEBSITE: [your website URL]
 YOUR_RESUME_URL: [public URL to your resume PDF]
 YOUR_LINKEDIN_URL: [your LinkedIn profile URL]
 YOUR_SUMMARY: |
@@ -54,8 +77,10 @@ Example:
 ```
 YOUR_NAME: Jordan Smith
 YOUR_TITLE: Senior Product Designer
-YOUR_RESUME_URL: https://yoursite.com/resume.pdf
-YOUR_LINKEDIN_URL: https://www.linkedin.com/in/yourhandle
+YOUR_EMAIL: jordan@example.com
+YOUR_WEBSITE: https://jordansmith.com/
+YOUR_RESUME_URL: https://jordansmith.com/resume.pdf
+YOUR_LINKEDIN_URL: https://www.linkedin.com/in/jordansmith
 YOUR_SUMMARY: |
   - 10+ years of product design across SaaS, fintech, and healthcare
   - Led design at Acme Corp, Widgets Inc, and StartupCo. Managed teams of up to 6.
@@ -70,15 +95,37 @@ YOUR_SUMMARY: |
 
 ```
 YOUR_FOLDER_ID: [Google Drive folder ID where cloned docs will be saved]
-YOUR_COVER_LETTER_TEMPLATE_ID: [file ID of your cover letter Google Doc template]
-YOUR_RESUME_TEMPLATE_ID: [file ID of your resume Google Doc template]
+
+Single-track setup (one role type):
+  YOUR_COVER_LETTER_TEMPLATE_ID: [file ID of your cover letter Google Doc template]
+  YOUR_RESUME_TEMPLATE_ID: [file ID of your resume Google Doc template]
+
+Two-track setup (PD and PM):
+  PD_COVER_LETTER_TEMPLATE_ID: [file ID of PD cover letter template]
+  PD_RESUME_TEMPLATE_ID: [file ID of PD resume template]
+  PM_COVER_LETTER_TEMPLATE_ID: [file ID of PM cover letter template]
+  PM_RESUME_TEMPLATE_ID: [file ID of PM resume template]
 ```
 
 Templates must contain these exact placeholder strings:
 - Cover letter template: `[[cover letter copy]]` where the body paragraphs go
 - Resume template: `[[resume summary copy]]` where the professional summary goes
 
-See `SETUP.md` for instructions on creating and sharing your templates.
+See SETUP.md for instructions on creating your Google Doc templates and finding file IDs.
+
+---
+
+## Step 0 — Determine role track
+
+If you have configured two-track templates (PD and PM above), ask the user one question
+before fetching anything:
+
+    Is this role Product Design (PD) or Product Manager (PM) focused?
+
+Wait for the answer. Store the track as either "PD" or "PM". Use it in Step 5 to select
+the correct templates and in Step 6 to focus the cover letter and resume summary.
+
+If only one track is configured, skip this step and proceed directly to Step 1.
 
 ---
 
@@ -89,7 +136,6 @@ Use `web_fetch` on the JD URL. Extract:
 - Company name (the hiring org, not the job board)
 - Exact job title
 - Full job description (responsibilities, requirements, qualifications)
-- Salary / compensation (note "Not specified" if absent)
 - Hiring manager or reporting manager name, if listed
 
 If the page is paywalled or the fetch fails, ask the user to paste the JD text.
@@ -139,42 +185,299 @@ queries like:
 
 Try at minimum two distinct queries before concluding not found.
 
-If found: record their first name and LinkedIn profile URL.
-If not found: state "Not found" and provide 2-3 specific actions the user can take (see
-CONTACT section rules below).
+If found: record their first name and full LinkedIn profile URL. Store as CONTACT_LINKEDIN_URL.
+
+If not found: set CONTACT_LINKEDIN_URL to null.
+Then construct the LinkedIn company people page URL. Search for the company's LinkedIn
+slug using a query like "[Company Name] LinkedIn company" and extract the slug from the
+result (e.g., "linkedin.com/company/acme-corp" → slug is "acme-corp"). Build:
+
+    https://www.linkedin.com/company/[slug]/people/
+
+Store as COMPANY_PEOPLE_URL. If the slug cannot be determined, set COMPANY_PEOPLE_URL
+to "https://www.linkedin.com/search/results/people/?keywords=[Company+Name]" as a
+fallback, with the company name URL-encoded.
 
 ---
 
-## Step 5 — Identify the top 5 keywords
+## Step 4b — Find the contact's work email
 
-Before writing any content, scan the full job description and identify the 5 most important
-keywords or phrases — the terms that appear repeatedly, are listed as requirements, or
-define the core focus of the role. List them. These must appear naturally in both the
-cover letter body and the resume summary.
+After identifying the contact in Step 4, attempt to find their work email address.
+Store the result as CONTACT_EMAIL (string or null).
+
+Try these approaches in order, stopping as soon as an email is found:
+
+1. Web search with Hunter.io pattern:
+   Search: "[First Name] [Last Name] [Company Name] email site:hunter.io"
+   Or: "[First Name] [Last Name] [Company Name] email contact"
+
+2. Common pattern inference (use only if company domain is known and pattern is
+   strongly suggested by public sources):
+   Try firstname@company.com, first.last@company.com, firstlast@company.com.
+   Only include if you have seen evidence of the pattern from a public source.
+   Never fabricate or guess without corroborating evidence.
+
+3. LinkedIn About section or company website contact page:
+   Search: "[Company Name] contact email site:[company domain]"
+
+If a confirmed email is found:
+- Store as CONTACT_EMAIL.
+- Build a Gmail compose URL:
+    https://mail.google.com/mail/?view=cm&fs=1&to=[CONTACT_EMAIL]&from=[YOUR_EMAIL]&su=[SUBJECT]&body=[BODY]
+  Where [SUBJECT] and [BODY] are URL-encoded. The subject should be:
+    "Re: [Job Title] at [Company Name] — [YOUR_NAME]"
+  The body field should be left empty (the outreach note will be copied separately).
+
+If no confirmed email is found:
+- Set CONTACT_EMAIL to null.
+- In the widget, show a subdued note: "Email not found — try Hunter.io or RocketReach
+  for [Company Name] domain."
 
 ---
 
-## Step 6 — Generate content
+## Step 5 — Clone Drive templates
 
-Generate all three pieces of content before outputting anything. Count words and characters
-before writing each one.
+Use Google Drive MCP tools to clone the two matching template files into the Drive folder.
+Do this before assembling the kit so the links are ready.
 
-### Cover letter body
+Step 5a — Select template IDs.
 
-Write the core message only. No salutation. No closing. Body text only. The template
-already contains the salutation and sign-off.
+Use the template file IDs configured in the Google Drive templates section above.
+If two-track setup: use the IDs matching the track from Step 0.
+If single-track setup: use YOUR_COVER_LETTER_TEMPLATE_ID and YOUR_RESUME_TEMPLATE_ID.
 
-Constraints:
-- Under 200 words. Count words before writing. Hard limit.
+Do NOT search for template files — use the hardcoded IDs only.
+
+Step 5b — Copy the files.
+
+Use `Google Drive:copy_file` on each file ID. Set the new name to:
+    Resume:       [YOUR_NAME] - Resume - [Company Name] - [Job Title]
+    Cover Letter: [YOUR_NAME] - Cover Letter - [Company Name] - [Job Title]
+
+If two-track setup, prefix the track:
+    [Track] - Resume - [YOUR_NAME] - [Company Name] - [Job Title]
+    [Track] - Cover Letter - [YOUR_NAME] - [Company Name] - [Job Title]
+
+Place the copies in: YOUR_FOLDER_ID
+
+Step 5c — Get the links.
+
+Use `Google Drive:get_file_metadata` on each new file. Extract the webViewLink.
+Store as RESUME_DRIVE_LINK and COVER_DRIVE_LINK.
+
+If any operation fails, proceed without links and note the failure in the widget.
+
+Step 5d — Open the cloned files in Chrome.
+
+After the links are confirmed, use `mcp__Claude_in_Chrome__navigate` to open each
+cloned file in the browser automatically — once for RESUME_DRIVE_LINK and once for
+COVER_DRIVE_LINK. This lets the user start editing immediately.
+
+If the Claude in Chrome tool is unavailable or the navigate call fails, skip silently
+and proceed to Step 6.
+
+---
+
+## Step 6 — Assemble and render the kit
+
+Render the full kit as an HTML widget using the `show_widget` tool. Use the
+loading_messages parameter with 2-3 brief messages.
+
+The widget displays sections in this order: HEADER, CONTACT, EMAIL OUTREACH,
+COVER LETTER, RESUME SUMMARY, DOCUMENT TEMPLATES.
+
+### Visual design specification
+
+Typography and color:
+- Font stack: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif
+- Background: #FAFAFA for the page, #FFFFFF for cards
+- Primary text: #111827
+- Secondary text: #6B7280
+- Accent: #2563EB (blue)
+- Border: #E5E7EB (subtle)
+- Success green for copied state: #16A34A
+
+Layout:
+- Full-width card layout. Each section is a white card with border-radius: 12px,
+  a 1px border in #E5E7EB, and padding: 20px 24px.
+- Cards have a subtle box-shadow: 0 1px 3px rgba(0,0,0,0.06).
+- 16px vertical gap between cards.
+- No outer horizontal padding constraints; fill the available width.
+
+Header card:
+- Background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%)
+- White text throughout.
+- Company name in 22px bold. Job title below in 15px, opacity 0.85.
+- If two-track setup: a small pill badge on the right showing the track (PD or PM)
+  in white with a semi-transparent background (rgba(255,255,255,0.2)), 11px font, uppercase.
+
+Section cards (CONTACT, EMAIL OUTREACH, COVER LETTER, RESUME SUMMARY, DOCUMENT TEMPLATES):
+- Each card has a section label row at the top: label text in 10px, bold,
+  letter-spacing 0.08em, uppercase, color #6B7280.
+- A 1px horizontal rule in #F3F4F6 separates the label row from the body.
+- Body text at 14px, line-height 1.7, color #111827.
+
+Action controls (Copy button and Open in Drive link):
+- Position them in the top-right of the label row, flex-end aligned.
+- Copy button: 11px font, font-weight 600, padding 4px 12px, border-radius 6px,
+  background #F3F4F6, border: 1px solid #E5E7EB, color #374151, cursor pointer.
+  On hover: background #E5E7EB. On click: copy text, change label to "Copied ✓",
+  change background to #DCFCE7, color #16A34A, border-color #BBF7D0. Restore after 2s.
+- Open in Drive link: 11px font, font-weight 600, color #2563EB, no underline,
+  with a small "↗" suffix. On hover: underline.
+
+### Section-by-section content
+
+---
+
+#### HEADER card
+
+Gradient card (see above). Display:
+- Company name (large, bold, white)
+- Job title (smaller, white, slightly transparent)
+- Track badge right-aligned if two-track setup is configured
+
+---
+
+#### EMAIL OUTREACH card
+
+Top row: label "Email Outreach" on the left.
+
+Email address block:
+- If CONTACT_EMAIL is found: show it as a clickable button styled in accent blue,
+  with a "✉ Open in Gmail ↗" label. The href is the Gmail compose URL from Step 4b.
+  Opens in a new tab.
+- If CONTACT_EMAIL is null: show in secondary text:
+  "Email not found — try Hunter.io or RocketReach for [Company Name] domain."
+
+Divider (1px #F3F4F6) below the email block.
+
+Outreach note block:
+- Label: "Email Note" in 10px uppercase secondary text. Copy button on the right.
+- Note body: rendered as plain readable text (white-space: pre-wrap), 14px, line-height 1.7.
+
+---
+
+#### CONTACT card
+
+If CONTACT_LINKEDIN_URL is null, show a small "Not found" line in secondary text above
+the note, followed by a clickable link using COMPANY_PEOPLE_URL labeled
+"Browse [Company Name] employees on LinkedIn ↗", and a small bulleted list of three
+manual search actions. Then show the note block below a divider.
+
+Note block:
+- Label row: "LinkedIn Note" in 10px uppercase secondary text on the left.
+  On the right: Copy button + LinkedIn link (CONTACT_LINKEDIN_URL if found,
+  COMPANY_PEOPLE_URL if not), labeled "LinkedIn ↗", opens in new tab.
+- Note body rendered as plain readable text (white-space: pre-wrap).
+
+---
+
+#### COVER LETTER card
+
+Controls row: Copy button + Open in Drive link (COVER_DRIVE_LINK).
+If COVER_DRIVE_LINK is unavailable, show: "Drive link unavailable" in secondary text.
+
+Body: cover letter text, pre-wrap, 14px, line-height 1.7.
+
+---
+
+#### RESUME SUMMARY card
+
+Controls row: Copy button + Open in Drive link (RESUME_DRIVE_LINK).
+Same fallback behavior as cover letter.
+
+Body: summary text, pre-wrap, 14px, line-height 1.7.
+Below the summary, add a small character count in secondary text: "[N] / 484 characters"
+
+---
+
+#### DOCUMENT TEMPLATES card
+
+Folder link at top: "Open Drive folder ↗" in accent blue, opens in new tab.
+
+Below, two rows — one per cloned file. Each row has:
+- The full file name in 13px font-weight 500.
+- A small "Open ↗" link to the right in accent blue, linking to the Drive file.
+
+If Step 5 failed, note this in secondary text and instruct the user to clone manually.
+
+---
+
+Do not use any external CSS frameworks or JS libraries. All styles and scripts inline.
+
+---
+
+### EMAIL OUTREACH:
+
+A warm, direct outreach email — longer and more substantive than the LinkedIn note.
+This is meant to be sent from YOUR_EMAIL to the contact's work email.
+
+Length: approximately double the LinkedIn note. Target 500–600 characters of body text
+(not counting the greeting or sign-off). Hard ceiling: 700 characters of body text.
+
+Structure:
+- Open with: Hi [First Name],
+- Body: 3–4 sentences.
+  1. State the role applied for and the specific reason this company is compelling
+     (one sentence, tied to a real product or company characteristic, not generic interest).
+  2. Name one or two specific companies or projects from YOUR_SUMMARY where the user
+     solved a similar problem to what this role requires. Be concrete: name the company,
+     the problem, and what was done. Draw only from the resume and LinkedIn profile.
+  3. Reference one specific credential, shipped product, or measurable outcome from
+     YOUR_SUMMARY that directly maps to the role's needs. One sentence.
+  4. A direct, low-pressure close: invite a conversation. No asking for a favor or
+     expressing hope. Example: "Happy to share more if useful."
+- Sign-off:
+    Cheers,
+    [YOUR_NAME]
+    [YOUR_EMAIL]
+    [YOUR_WEBSITE]
+
+Writing rules: same as cover letter. Active voice. No filler. No em dashes. No semicolons.
+No banned words. No "I'm excited to" or "I hope to hear from you."
+
+---
+
+### CONTACT:
+
+Compose the LinkedIn connection note per these rules:
+
+- Start with: Hi, [FIRST NAME OF CONTACT]
+- End with:
+    Best,
+    [YOUR_NAME]
+- If no contact was found, use: Hi, [hiring team] — and flag for the user to fill in.
+- Under 300 characters total including greeting and sign-off. Count before writing.
+- One or two sentences between greeting and sign-off.
+- Mention the specific role applied for.
+- Include one specific reason the user is a fit, tied to a real credential or experience.
+- No filler, no generic enthusiasm language.
+
+---
+
+### COVER LETTER:
+
+Write the core message only. No beginning salutation. No closing salutation. No "Dear",
+no "Sincerely", no "Best regards". Body text only.
+
+If two-track setup is configured, tailor the letter's framing to the track selected in
+Step 0 (lead with design strengths for PD, lead with product and builder strengths for PM).
+Otherwise, use YOUR_SUMMARY as the source and tailor the letter to the JD.
+
+Shared constraints:
+- Under 300 words. Count words before writing. Hard limit.
 - Specific, direct, active voice throughout.
 - No hedging. "I bring" beats "I believe I bring."
 - Open with a specific statement about what the user brings to this role. No warm-up language.
 - State one core value proposition as a direct declarative sentence.
 - Follow with 2-3 proof points from the resume that match the job's stated needs.
   Use company names and outcomes. No generic claims.
-- If Step 3 surfaced LinkedIn-only roles with a clear match, incorporate the most relevant
-  one as an additional proof point. Only use what the profile actually shows.
-- Include all 5 keywords from Step 5 naturally.
+- If Step 3 surfaced LinkedIn-only roles with a clear match to the JD (by industry,
+  domain, or function), incorporate the most relevant one as an additional proof point.
+  Introduce it naturally. Do not force it if the fit is weak. Use only what the
+  LinkedIn profile actually shows.
+- Include the top 5 keywords from the JD naturally.
 - Close with one forward-looking sentence about what the user brings to this specific role.
 - Match the tone of the posting: casual startup vs. formal enterprise.
 
@@ -190,184 +493,137 @@ Writing rules (apply every one, then review before finalizing):
   craft, crafting, imagine, realm, game-changer, unlock, discover, skyrocket, abyss,
   not alone, in a world where, revolutionize, disruptive, utilize, utilizing, dive deep,
   tapestry, illuminate, unveil, pivotal, intricate, elucidate, hence, furthermore, realm,
-  however, harness, exciting, groundbreaking, cutting-edge, remarkable, remains to be seen,
+  however, harness, exciting, groundbrearding, cutting-edge, remarkable, remains to be seen,
   glimpse into, navigating, landscape, stark, testament, in summary, in conclusion,
   moreover, boost, skyrocketing, opened up, powerful, inquiries, ever-evolving.
 - No metaphors, clichés, or generalizations.
 - No unnecessary adjectives or adverbs.
 - No hashtags.
 
-### Resume summary
+---
+
+### RESUME SUMMARY:
 
 A professional summary aligned to the role.
 
 Constraints:
 - Maximum 484 characters (count characters, not words). Hard limit.
-- Third person or tight first-person. No "I am a" opener. Lead with the descriptor.
+- No "I am a" opener. Lead with the descriptor.
   Example: "Product designer with 10+ years across SaaS and fintech..."
 - Mention 2-3 specific strengths from the resume that match the role's requirements.
 - Include at least one concrete differentiator — a measurable achievement, a unique
-  credential, or something specific that sets this person apart.
-- Include all 5 keywords from Step 5 naturally.
+  credential, or something specific that sets the user apart.
+- Include the top 5 keywords from the JD naturally.
 - Do not pad to hit the limit. A tight 300-character summary beats a padded 484.
-- Apply every writing rule from the cover letter section above.
+- Apply every writing rule from the COVER LETTER section above.
 
 Count characters before finalizing. If over 484, trim.
 
-### LinkedIn note
+---
 
-A connection request note mentioning the application and why the user is a fit.
+### DOCUMENT TEMPLATES:
 
-Structure:
-- Start with: Hi, [FIRST NAME OF CONTACT]
-- End with: Best, [YOUR_NAME]
-- If no contact was found, address it to the hiring team and flag it for the user to fill in.
+Show the Drive folder link and confirm the files cloned in Step 5.
 
-Constraints:
-- Total character count (including greeting and sign-off) must be under 300 characters.
-  Count characters before writing. Hard limit.
-- One or two sentences between greeting and sign-off.
-- Mention the specific role applied for.
-- Include one specific reason the user is a fit, tied to a real credential or experience.
-- No filler, no generic enthusiasm language.
-
-Count characters. If over 300, trim.
+If Step 5 failed, note this and instruct the user to clone the templates manually.
 
 ---
 
-## Step 7 — Output the in-chat kit
+## Step 7 — Paste generated content into the cloned Drive files
 
-Output in plain text, exactly in this order. Use no markdown formatting, no asterisks,
-no headers beyond the section labels themselves.
+After the widget is rendered, paste the cover letter and resume summary into their
+respective cloned Google Docs. The documents are already open in Chrome from Step 5d.
 
-```
-[Company Name] — [Job Title]
+The placeholder strings in the templates are:
+    Cover Letter doc: [[cover letter copy]]
+    Resume doc:       [[resume summary copy]]
 
-TOP 5 KEYWORDS:
-1. [keyword]
-2. [keyword]
-3. [keyword]
-4. [keyword]
-5. [keyword]
+For each document, use Find & Replace to swap the placeholder for the generated text:
 
-CONTACT:
-[contact output]
+1. Switch to the correct Chrome tab using `mcp__Claude_in_Chrome__switch_browser` or
+   identify the tab ID from the context obtained in Step 5d.
 
-COVER LETTER:
-[cover letter body]
+2. Open Find & Replace in Google Docs:
+   Use `mcp__Claude_in_Chrome__shortcuts_execute` with shortcut "cmd+h" (Mac).
 
-RESUME SUMMARY:
-[resume summary]
+3. Fill in the Find & Replace dialog:
+   Use `mcp__Claude_in_Chrome__form_input` to enter the placeholder in the Find field
+   and the generated text in the Replace field. Click Replace All.
 
-LINKEDIN NOTE:
-[linkedin note]
-```
+4. Confirm the replacement with `mcp__Claude_in_Chrome__get_page_text`.
 
-CONTACT format:
-- If found: Name: [Full Name] / LinkedIn: [URL]
-- If not found: "Not found." followed by 2-3 specific search actions for the user.
+Repeat for the second document.
+
+If any step fails, skip silently and add to the chat:
+  "Auto-paste succeeded." or "Auto-paste failed — use the Copy buttons in the kit."
 
 ---
 
-## Step 8 — Create the Job Details PDF
+## Step 8 — Open LinkedIn and pre-fill the connection note
 
-```bash
-pip3 install reportlab -q
-python3 - <<'EOF'
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
-import os
+After the widget is rendered, navigate to the contact's LinkedIn profile and pre-fill
+the connection request note so the user only needs to click Send.
 
-output_path = os.path.expanduser("~/Downloads/Job Details - COMPANY - JOB TITLE.pdf")
-doc = SimpleDocTemplate(output_path, pagesize=letter,
-    rightMargin=inch, leftMargin=inch, topMargin=inch, bottomMargin=inch)
-styles = getSampleStyleSheet()
-story = []
-story.append(Paragraph("COMPANY — JOB TITLE", styles['Title']))
-story.append(Spacer(1, 12))
-story.append(Paragraph("Salary: SALARY", styles['Normal']))
-story.append(Spacer(1, 12))
-story.append(Paragraph("JOB DESCRIPTION", styles['Normal']))
-doc.build(story)
-print(f"Saved: {output_path}")
-EOF
-```
+Use CONTACT_LINKEDIN_URL from Step 4. If it is null, skip this step silently and note
+it in the chat: "LinkedIn contact not found — connect manually via the Browse link in
+the kit."
 
-Replace COMPANY, JOB TITLE, SALARY, and JOB DESCRIPTION with actual values.
-Newlines in the description should be converted to `<br/>` tags for ReportLab.
-Save to `~/Downloads/`.
+Step 8a — Navigate to the contact's LinkedIn profile.
 
----
+Use `mcp__Claude_in_Chrome__navigate` to open CONTACT_LINKEDIN_URL in a new Chrome tab.
+Create the tab first with `mcp__Claude_in_Chrome__tabs_create_mcp`, then navigate to it.
 
-## Step 9 — Clone both templates via Drive MCP
+Step 8b — Click the Connect button.
 
-Clone both templates in parallel using the Drive MCP `copy_file` tool.
+    document.querySelector('[aria-label*="Connect"]')?.click()
 
-Cover letter:
-- `fileId`: `YOUR_COVER_LETTER_TEMPLATE_ID`
-- `name`: `Cover Letter - YOUR_NAME - COMPANY - JOB TITLE`
-- `parentId`: `YOUR_FOLDER_ID`
+If the button is not immediately visible (may be inside a "More" dropdown), click the
+"More" button first:
 
-Resume:
-- `fileId`: `YOUR_RESUME_TEMPLATE_ID`
-- `name`: `Resume - YOUR_NAME - COMPANY - JOB TITLE`
-- `parentId`: `YOUR_FOLDER_ID`
+    document.querySelector('[aria-label*="More actions"]')?.click()
 
-Record both file IDs returned by the tool.
+Then retry the Connect button click.
 
----
+Step 8c — Click "Add a note" in the invitation dialog.
 
-## Step 10 — Hand off to user for manual fill and PDF export
+    document.querySelector('[aria-label*="Add a note"]')?.click()
 
-Present the following to the user in the chat:
+Step 8d — Fill in the note text.
 
-Your cloned docs are ready. For each one:
-1. Open the link
-2. Find the placeholder text (`[[cover letter copy]]` or `[[resume summary copy]]`)
-3. Select it and paste the content below in its place
-4. File > Download > PDF Document (.pdf)
+    const ta = document.querySelector('textarea[name="message"]') ||
+               document.querySelector('.send-invite__custom-message') ||
+               document.querySelector('textarea');
+    if (ta) {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeInputValueSetter.call(ta, NOTE_TEXT_HERE);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
 
-**Cover Letter**
-Link: https://docs.google.com/document/d/COVER_LETTER_DOC_ID/edit
+Replace NOTE_TEXT_HERE with the full LinkedIn note text from Step 6 (CONTACT section),
+as a JS string literal with escaped newlines.
 
-Paste this in place of `[[cover letter copy]]`:
-[cover letter body — all paragraphs, separated by blank lines]
+Step 8e — Stop. Do NOT click Send.
 
-**Resume**
-Link: https://docs.google.com/document/d/RESUME_DOC_ID/edit
+Leave the dialog open with the note pre-filled. Tell the user in the chat:
+  "LinkedIn note pre-filled for [Contact First Name] at [Company]. Review and click
+   Send when ready."
 
-Paste this in place of `[[resume summary copy]]`:
-[resume summary text]
-
----
-
-## Step 11 — Confirm
-
-Confirm in the chat:
-
-- Job Details PDF saved to `~/Downloads/Job Details - COMPANY - JOB TITLE.pdf`
-- Cover letter and resume cloned and links provided above
-- Cover letter word count and resume summary character count
-- Any keyword gaps noticed between the JD and what was included
-
----
-
-## File naming rules
-
-- Replace characters invalid in file names (`/`, `:`, `?`, `*`, `"`, `<`, `>`, `|`) with a hyphen.
-- Trim trailing spaces or hyphens from each segment.
-- Keep exact casing from the job posting.
+If any step in Step 8 fails, skip silently and add to the chat:
+  "LinkedIn auto-fill failed — use the Copy button in the kit and connect manually."
 
 ---
 
 ## Hard constraints summary
 
-- Cover letter body: under 200 words. Count before writing.
+- Cover letter: under 300 words. Count before writing.
 - Resume summary: 484 characters or fewer. Count before writing.
 - LinkedIn note: under 300 characters total. Count before writing.
 - Never invent credentials, companies, dates, or metrics not in the resume or LinkedIn profile.
-- In-chat output is plain text. No markdown formatting. No asterisks.
-- Section labels appear exactly as: CONTACT:, COVER LETTER:, RESUME SUMMARY:, LINKEDIN NOTE:
-- All 5 keywords must appear in both the cover letter and resume summary.
+- Output is an HTML widget via show_widget. No raw plain text output. No markdown. No asterisks.
+- Sections in order: HEADER, CONTACT, EMAIL OUTREACH, COVER LETTER, RESUME SUMMARY, DOCUMENT TEMPLATES.
+- CONTACT card includes both the contact block and the LinkedIn note block with a copy button.
+- COVER LETTER and RESUME SUMMARY each have a Copy button and an Open in Drive link.
+- RESUME SUMMARY card shows a character count below the text.
+- Widget uses the visual design spec from Step 6: gradient header, card layout, defined color system.
+- Top 5 JD keywords must appear in both the cover letter and resume summary.
