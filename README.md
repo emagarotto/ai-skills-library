@@ -52,11 +52,13 @@ Trigger phrases:
 
 ### job-application-kit-public
 
-Generates a full tailored application kit from a job posting URL. Fetches the job description, your resume, and your LinkedIn profile. Researches the hiring manager. Identifies the top 5 keywords from the JD. Produces a cover letter body, resume summary, and LinkedIn connection note — all constrained to exact character and word limits.
+Generates a full tailored application kit from a job posting URL. Fetches the job description, your resume, and your LinkedIn profile. Researches the hiring manager and attempts to find their work email. Identifies the top 5 keywords from the JD. Produces a cover letter body, email outreach note, resume summary, and LinkedIn connection note — all constrained to exact character and word limits.
 
-On Claude: also creates a Job Details PDF and clones your Google Doc cover letter and resume templates in Drive with the company and role in the filename, ready for you to paste the generated content and export to PDF.
+Supports a two-track setup (e.g., Product Design and Product Manager) so the cover letter and resume summary frame your background differently depending on the role type.
 
-Drop in your name, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
+On Claude: also renders an interactive HTML widget with copy buttons and Drive links, clones your Google Doc templates in Drive, auto-pastes the generated content into the cloned docs, and pre-fills the LinkedIn connection request — ready to send.
+
+Drop in your name, email, website, resume URL, LinkedIn URL, background bullets, and Google Drive template IDs to make it yours. Setup takes about 10 minutes.
 
 Trigger phrases:
 - "Process this job: [URL]"
@@ -69,7 +71,7 @@ See `job-application-kit-public/SETUP.md` for the full setup guide.
 
 | Platform | File | Output |
 |----------|------|--------|
-| Claude | `job-application-kit-public/claude/SKILL.md` | In-chat kit + Job Details PDF + cloned Drive templates |
+| Claude | `job-application-kit-public/claude/SKILL.md` | Interactive widget + cloned Drive templates + auto-paste + LinkedIn pre-fill |
 | ChatGPT | `job-application-kit-public/chatgpt/job-application-kit-public.md` | In-chat kit (plain text) |
 | Copilot | `job-application-kit-public/copilot/job-application-kit-public.md` | In-chat kit (plain text) |
 | Gemini | `job-application-kit-public/gemini/job-application-kit-public.md` | In-chat kit (plain text) |
